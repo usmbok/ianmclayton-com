@@ -53,7 +53,7 @@ function stripHtml(html: string | null): string {
   return html ? html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
 }
 
-function matchProject(p: Project, q: string): boolean {
+function matchProject(p: Project, q: string, employerName?: string): boolean {
   if (!q) return true;
   const lower = q.toLowerCase();
   const clientLabel = p.show_client_name && p.client_name ? p.client_name : p.client_display_name;
@@ -64,6 +64,7 @@ function matchProject(p: Project, q: string): boolean {
     p.industry,
     p.project_type,
     p.role,
+    employerName,
     stripHtml(p.short_focus),
     stripHtml(p.context_html),
     stripHtml(p.challenge_html),
@@ -119,6 +120,7 @@ export function AdminProjectsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [industryFilter, setIndustryFilter] = useState('');
+  const [employerFilter, setEmployerFilter] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
   async function load() {
@@ -198,24 +200,28 @@ export function AdminProjectsPage() {
   // Dropdown options derived from loaded data
   const types = [...new Set(projects.map(p => p.project_type).filter(Boolean))] as string[];
   const industries = [...new Set(projects.map(p => p.industry).filter(Boolean))] as string[];
+  const employerMap = Object.fromEntries(employers.map(e => [e.id, e.short_name || e.name]));
 
   // Apply search + filters
   const filtered = projects.filter(p => {
-    if (!matchProject(p, searchQuery)) return false;
+    const employerName = p.employer_id ? employerMap[p.employer_id] : undefined;
+    if (!matchProject(p, searchQuery, employerName)) return false;
     if (statusFilter && p.status !== statusFilter) return false;
     if (typeFilter && p.project_type !== typeFilter) return false;
     if (industryFilter && p.industry !== industryFilter) return false;
+    if (employerFilter && p.employer_id !== employerFilter) return false;
     return true;
   });
 
   const hasSearch = searchQuery.trim().length > 0;
-  const activeFilters = [statusFilter, typeFilter, industryFilter].filter(Boolean).length;
+  const activeFilters = [statusFilter, typeFilter, industryFilter, employerFilter].filter(Boolean).length;
 
   function clearAll() {
     setSearchQuery('');
     setStatusFilter('');
     setTypeFilter('');
     setIndustryFilter('');
+    setEmployerFilter('');
   }
 
   return (
@@ -298,6 +304,16 @@ export function AdminProjectsPage() {
           <option value="">All industries</option>
           {industries.map(i => <option key={i} value={i}>{i}</option>)}
         </select>
+        <select
+          value={employerFilter}
+          onChange={e => setEmployerFilter(e.target.value)}
+          className={`text-xs rounded-lg border px-2.5 py-1.5 bg-light-card dark:bg-dark-card text-light-text dark:text-dark-text transition-colors ${
+            employerFilter ? 'border-accent-cyan text-accent-cyan' : 'border-light-border dark:border-dark-border'
+          }`}
+        >
+          <option value="">All employers</option>
+          {employers.map(e => <option key={e.id} value={e.id}>{e.short_name || e.name}</option>)}
+        </select>
         {(hasSearch || activeFilters > 0) && (
           <button
             onClick={clearAll}
@@ -322,6 +338,7 @@ export function AdminProjectsPage() {
                 <th className="text-left px-4 py-3 font-semibold">Title</th>
                 <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">Type</th>
                 <th className="text-left px-4 py-3 font-semibold hidden lg:table-cell">Industry</th>
+                <th className="text-left px-4 py-3 font-semibold hidden xl:table-cell">Employer</th>
                 <th className="text-left px-4 py-3 font-semibold">Status</th>
                 <th className="text-right px-4 py-3 font-semibold">Actions</th>
               </tr>
@@ -341,6 +358,15 @@ export function AdminProjectsPage() {
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell text-light-secondary dark:text-dark-secondary capitalize">{p.project_type || '—'}</td>
                   <td className="px-4 py-3 hidden lg:table-cell text-light-secondary dark:text-dark-secondary">{p.industry || '—'}</td>
+                  <td className="px-4 py-3 hidden xl:table-cell">
+                    {p.employer_id ? (
+                      <span className="text-xs font-medium text-light-secondary dark:text-dark-secondary">
+                        {employerMap[p.employer_id] ?? '—'}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-light-muted dark:text-dark-muted">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${p.status === 'published' ? 'bg-accent-green/10 text-accent-green' : 'bg-light-elevated dark:bg-dark-elevated text-light-muted dark:text-dark-muted'}`}>
