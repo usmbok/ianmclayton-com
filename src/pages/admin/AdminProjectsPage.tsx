@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AdminBreadcrumb } from '../../components/AdminLayout';
 import { RichTextEditor } from '../../components/RichTextEditor';
-import { Plus, Pencil, Trash2, Eye, EyeOff, Star, X, Save, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Star, X, Save, AlertCircle, Search, Filter } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -49,6 +49,31 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+function stripHtml(html: string | null): string {
+  return html ? html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+}
+
+function matchProject(p: Project, q: string): boolean {
+  if (!q) return true;
+  const lower = q.toLowerCase();
+  const clientLabel = p.show_client_name && p.client_name ? p.client_name : p.client_display_name;
+  return [
+    p.title,
+    clientLabel,
+    p.client_name,
+    p.industry,
+    p.project_type,
+    p.role,
+    stripHtml(p.short_focus),
+    stripHtml(p.context_html),
+    stripHtml(p.challenge_html),
+    stripHtml(p.outcomes_html),
+    ...(p.sm_themes ?? []),
+    ...(p.automation_themes ?? []),
+    ...(p.tags ?? []),
+  ].some(v => v?.toLowerCase().includes(lower));
+}
+
 function ArrayField({ value, onChange, placeholder }: { value: string[]; onChange: (v: string[]) => void; placeholder: string }) {
   const [input, setInput] = useState('');
   return (
@@ -88,6 +113,13 @@ export function AdminProjectsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Search & filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [industryFilter, setIndustryFilter] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
 
   async function load() {
     const [{ data: proj }, { data: emps }] = await Promise.all([
@@ -163,6 +195,29 @@ export function AdminProjectsPage() {
   const inputCls = 'w-full text-sm px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-card text-light-text dark:text-dark-text placeholder:text-light-muted dark:placeholder:text-dark-muted focus:outline-none focus:border-accent-cyan';
   const labelCls = 'block text-xs font-semibold text-light-muted dark:text-dark-muted mb-1';
 
+  // Dropdown options derived from loaded data
+  const types = [...new Set(projects.map(p => p.project_type).filter(Boolean))] as string[];
+  const industries = [...new Set(projects.map(p => p.industry).filter(Boolean))] as string[];
+
+  // Apply search + filters
+  const filtered = projects.filter(p => {
+    if (!matchProject(p, searchQuery)) return false;
+    if (statusFilter && p.status !== statusFilter) return false;
+    if (typeFilter && p.project_type !== typeFilter) return false;
+    if (industryFilter && p.industry !== industryFilter) return false;
+    return true;
+  });
+
+  const hasSearch = searchQuery.trim().length > 0;
+  const activeFilters = [statusFilter, typeFilter, industryFilter].filter(Boolean).length;
+
+  function clearAll() {
+    setSearchQuery('');
+    setStatusFilter('');
+    setTypeFilter('');
+    setIndustryFilter('');
+  }
+
   return (
     <div>
       <AdminBreadcrumb items={[{ label: 'Projects' }]} />
@@ -170,11 +225,90 @@ export function AdminProjectsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-light-text dark:text-dark-text">Projects</h1>
-          <p className="text-sm text-light-muted dark:text-dark-muted mt-0.5">{projects.length} total</p>
+          <p className="text-sm text-light-muted dark:text-dark-muted mt-0.5">
+            {hasSearch || activeFilters > 0
+              ? <>{filtered.length} of {projects.length} shown</>
+              : <>{projects.length} total</>
+            }
+          </p>
         </div>
         <button onClick={openNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-cyan text-white dark:text-dark-bg text-sm font-semibold hover:bg-accent-cyan/85 transition-colors">
           <Plus size={15} /> New Project
         </button>
+      </div>
+
+      {/* Search bar */}
+      <div className="mb-3">
+        <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all ${
+          hasSearch
+            ? 'border-accent-cyan bg-accent-cyan/5'
+            : 'border-light-border dark:border-dark-border bg-light-card dark:bg-dark-card'
+        }`}>
+          <Search size={15} className={`flex-shrink-0 ${hasSearch ? 'text-accent-cyan' : 'text-light-muted dark:text-dark-muted'}`} />
+          <input
+            ref={searchRef}
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search titles, clients, industries, themes, tags, topics…"
+            className="flex-1 bg-transparent text-sm text-light-text dark:text-dark-text placeholder:text-light-muted dark:placeholder:text-dark-muted outline-none"
+          />
+          {hasSearch && (
+            <button
+              onClick={() => { setSearchQuery(''); searchRef.current?.focus(); }}
+              className="flex-shrink-0 p-1 rounded-md text-light-muted dark:text-dark-muted hover:text-light-text dark:hover:text-dark-text hover:bg-light-elevated dark:hover:bg-dark-elevated transition-colors"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Filter row */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <Filter size={13} className="text-light-muted dark:text-dark-muted flex-shrink-0" />
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className={`text-xs rounded-lg border px-2.5 py-1.5 bg-light-card dark:bg-dark-card text-light-text dark:text-dark-text transition-colors ${
+            statusFilter ? 'border-accent-cyan text-accent-cyan' : 'border-light-border dark:border-dark-border'
+          }`}
+        >
+          <option value="">All statuses</option>
+          <option value="published">Published</option>
+          <option value="draft">Draft</option>
+        </select>
+        <select
+          value={typeFilter}
+          onChange={e => setTypeFilter(e.target.value)}
+          className={`text-xs rounded-lg border px-2.5 py-1.5 bg-light-card dark:bg-dark-card text-light-text dark:text-dark-text transition-colors ${
+            typeFilter ? 'border-accent-cyan text-accent-cyan' : 'border-light-border dark:border-dark-border'
+          }`}
+        >
+          <option value="">All types</option>
+          {types.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select
+          value={industryFilter}
+          onChange={e => setIndustryFilter(e.target.value)}
+          className={`text-xs rounded-lg border px-2.5 py-1.5 bg-light-card dark:bg-dark-card text-light-text dark:text-dark-text transition-colors ${
+            industryFilter ? 'border-accent-cyan text-accent-cyan' : 'border-light-border dark:border-dark-border'
+          }`}
+        >
+          <option value="">All industries</option>
+          {industries.map(i => <option key={i} value={i}>{i}</option>)}
+        </select>
+        {(hasSearch || activeFilters > 0) && (
+          <button
+            onClick={clearAll}
+            className="inline-flex items-center gap-1 text-xs text-light-muted dark:text-dark-muted hover:text-accent-red transition-colors"
+          >
+            <X size={11} /> Clear all
+          </button>
+        )}
+        {hasSearch && filtered.length === 0 && (
+          <span className="text-xs text-light-muted dark:text-dark-muted ml-1">No results for "{searchQuery}"</span>
+        )}
       </div>
 
       {/* Table */}
@@ -193,7 +327,7 @@ export function AdminProjectsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-light-border dark:divide-dark-border">
-              {projects.map(p => (
+              {filtered.map(p => (
                 <tr key={p.id} className="bg-light-card dark:bg-dark-card hover:bg-light-elevated dark:hover:bg-dark-elevated transition-colors">
                   <td className="px-4 py-3">
                     <div className="font-medium text-light-text dark:text-dark-text">{p.title}</div>
@@ -235,8 +369,10 @@ export function AdminProjectsPage() {
               ))}
             </tbody>
           </table>
-          {projects.length === 0 && (
-            <div className="py-12 text-center text-light-muted dark:text-dark-muted text-sm">No projects yet. Create your first one.</div>
+          {filtered.length === 0 && !loading && (
+            <div className="py-12 text-center text-light-muted dark:text-dark-muted text-sm">
+              {hasSearch || activeFilters > 0 ? 'No projects match your search.' : 'No projects yet. Create your first one.'}
+            </div>
           )}
         </div>
       )}
