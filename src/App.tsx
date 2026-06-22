@@ -27,6 +27,7 @@ import { AdminWorkHistoryPage } from './pages/admin/AdminWorkHistoryPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 import { AdminEmployersPage } from './pages/admin/AdminEmployersPage';
 import { AdminHomePage } from './pages/admin/AdminHomePage';
+import { AdminUseCasesPage } from './pages/admin/AdminUseCasesPage';
 
 function App() {
   return (
@@ -66,6 +67,7 @@ function App() {
               <Route path="mfa" element={<AdminMfaPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
               <Route path="employers" element={<AdminEmployersPage />} />
+              <Route path="use-cases" element={<AdminUseCasesPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

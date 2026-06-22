@@ -3,7 +3,7 @@ import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FolderOpen, Clock, FileText, Star,
   Briefcase, Share2, Settings, LogOut, Menu, X, ChevronRight,
-  Globe, ShieldCheck, Home, Building2, Layout,
+  Globe, ShieldCheck, Home, Building2, Layout, BookOpen,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
@@ -19,8 +19,9 @@ const navGroups = [
   {
     label: 'Content',
     items: [
-      { to: '/admin/projects', label: 'Projects', icon: FolderOpen, exact: false },
-      { to: '/admin/employers', label: 'Employers', icon: Building2, exact: false },
+      { to: '/admin/projects',   label: 'Projects',   icon: FolderOpen, exact: false },
+      { to: '/admin/use-cases',  label: 'Use Cases',  icon: BookOpen,   exact: false },
+      { to: '/admin/employers',  label: 'Employers',  icon: Building2,  exact: false },
       { to: '/admin/timeline', label: 'Timeline', icon: Clock, exact: false },
       { to: '/admin/articles', label: 'Articles', icon: FileText, exact: false },
       { to: '/admin/testimonials', label: 'Testimonials', icon: Star, exact: false },
