@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* TipTap rich text editor prose styles */
+.ProseMirror h2 { @apply text-lg font-bold mt-3 mb-1; }
+.ProseMirror h3 { @apply text-base font-semibold mt-2 mb-1; }
+.ProseMirror p { @apply my-1 leading-relaxed; }
+.ProseMirror ul { @apply list-disc pl-5 my-1 space-y-0.5; }
+.ProseMirror ol { @apply list-decimal pl-5 my-1 space-y-0.5; }
+.ProseMirror strong { @apply font-semibold; }
+.ProseMirror em { @apply italic; }
+.ProseMirror u { @apply underline; }
+.ProseMirror hr { @apply border-t border-light-border dark:border-dark-border my-3; }
+.ProseMirror a { @apply text-accent-cyan underline; }
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  @apply text-light-muted dark:text-dark-muted;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-light-bg text-light-text transition-colors duration-300;
+  }
+
+  .dark body {
+    @apply bg-dark-bg text-dark-text;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-light-card border border-light-border rounded-xl transition-all duration-200;
+  }
+
+  .dark .card {
+    @apply bg-dark-card border-dark-border;
+  }
+
+  .card-hover {
+    @apply hover:shadow-md hover:-translate-y-0.5 transition-all duration-200;
+  }
+
+  /* Primary button — cyan across all modes */
+  .btn-primary {
+    @apply px-5 py-2.5 bg-accent-cyan text-gray-900 rounded-lg font-semibold text-sm
+           hover:bg-accent-cyan/85 transition-colors duration-200;
+  }
+
+  /* Secondary button */
+  .btn-secondary {
+    @apply px-5 py-2.5 border border-light-border text-light-text rounded-lg font-medium text-sm
+           hover:bg-light-elevated transition-colors duration-200;
+  }
+
+  .dark .btn-secondary {
+    @apply border-dark-border text-dark-text hover:bg-dark-elevated;
+  }
+
+  /* Section label — small uppercase cyan tag above h2/h3 */
+  .section-label {
+    @apply text-xs font-semibold uppercase tracking-widest text-accent-cyan mb-2;
+  }
+
+  /* Section h2 heading */
+  .section-title {
+    @apply text-2xl sm:text-3xl font-bold text-light-text dark:text-dark-text;
+  }
+
+  /* Section h3 card heading */
+  .card-title {
+    @apply text-sm font-semibold text-light-text dark:text-dark-text;
+  }
+
+  /* Form input / select / textarea */
+  .form-input {
+    @apply w-full px-4 py-2.5 rounded-lg text-sm
+           bg-light-elevated dark:bg-dark-elevated
+           border border-light-border dark:border-dark-border
+           text-light-text dark:text-dark-text
+           placeholder-light-muted dark:placeholder-dark-muted
+           focus:outline-none focus:ring-2 focus:ring-accent-cyan/50 focus:border-accent-cyan
+           transition-colors duration-200;
+  }
+}
