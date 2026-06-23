@@ -11,6 +11,7 @@ import { AboutPage } from './pages/AboutPage';
 import { ContactPage } from './pages/ContactPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
+import { UseCaseDetailPage } from './pages/UseCaseDetailPage';
 import { TimelinePage } from './pages/TimelinePage';
 import { WorkHistoryPage } from './pages/WorkHistoryPage';
 import { ArticlesPage } from './pages/ArticlesPage';
@@ -42,6 +43,7 @@ function App() {
               <Route path="/work-history" element={<WorkHistoryPage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/projects/:slug" element={<ProjectDetailPage />} />
+              <Route path="/case-studies/:slug" element={<UseCaseDetailPage />} />
               <Route path="/timeline" element={<TimelinePage />} />
               <Route path="/articles" element={<ArticlesPage />} />
               <Route path="/articles/:slug" element={<ArticleDetailPage />} />
