@@ -675,17 +675,26 @@ function ExpertiseTab() {
 function SettingsTab() {
   const [delayMs, setDelayMs] = useState('5000');
   const [autoplay, setAutoplay] = useState(true);
+  const [tmEnabled, setTmEnabled] = useState(true);
+  const [tmAutoplay, setTmAutoplay] = useState(true);
+  const [tmDelayMs, setTmDelayMs] = useState('6000');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<'idle' | 'ok' | 'err'>('idle');
   const [errMsg, setErrMsg] = useState('');
 
   useEffect(() => {
-    supabase.from('site_settings').select('key,value').in('key', ['banner_slide_delay_ms', 'banner_autoplay']).then(({ data }) => {
+    supabase.from('site_settings').select('key,value').in('key', [
+      'banner_slide_delay_ms', 'banner_autoplay',
+      'testimonials_section_enabled', 'testimonials_autoplay', 'testimonials_slide_delay_ms',
+    ]).then(({ data }) => {
       if (data) {
         data.forEach(r => {
           if (r.key === 'banner_slide_delay_ms') setDelayMs(r.value ?? '5000');
           if (r.key === 'banner_autoplay') setAutoplay(r.value !== 'false');
+          if (r.key === 'testimonials_section_enabled') setTmEnabled(r.value !== 'false');
+          if (r.key === 'testimonials_autoplay') setTmAutoplay(r.value !== 'false');
+          if (r.key === 'testimonials_slide_delay_ms') setTmDelayMs(r.value ?? '6000');
         });
       }
       setLoading(false);
@@ -697,6 +706,9 @@ function SettingsTab() {
     const upserts = [
       { key: 'banner_slide_delay_ms', value: delayMs },
       { key: 'banner_autoplay', value: String(autoplay) },
+      { key: 'testimonials_section_enabled', value: String(tmEnabled) },
+      { key: 'testimonials_autoplay', value: String(tmAutoplay) },
+      { key: 'testimonials_slide_delay_ms', value: tmDelayMs },
     ];
     const { error } = await supabase.from('site_settings').upsert(upserts, { onConflict: 'key' });
     setSaving(false);
@@ -707,6 +719,22 @@ function SettingsTab() {
   if (loading) return <div className="h-10 w-64 rounded-lg bg-light-elevated dark:bg-dark-elevated animate-pulse" />;
 
   const delaySec = Math.round(Number(delayMs) / 1000);
+  const tmDelaySec = Math.round(Number(tmDelayMs) / 1000);
+
+  function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
+    return (
+      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+        <div
+          onClick={() => onChange(!value)}
+          className={`rounded-full transition-colors relative cursor-pointer ${value ? 'bg-accent-cyan' : 'bg-light-border dark:bg-dark-border'}`}
+          style={{ height: '22px', width: '40px' }}
+        >
+          <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-5' : 'translate-x-0.5'}`} />
+        </div>
+        <span className="text-sm text-light-text dark:text-dark-text">{label}</span>
+      </label>
+    );
+  }
 
   return (
     <div className="max-w-lg space-y-5">
@@ -727,16 +755,26 @@ function SettingsTab() {
               onChange={e => setDelayMs(String(Number(e.target.value) * 1000))}
             />
           </div>
-          <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <div
-              onClick={() => setAutoplay(p => !p)}
-              className={`w-10 h-5.5 rounded-full transition-colors relative cursor-pointer ${autoplay ? 'bg-accent-cyan' : 'bg-light-border dark:bg-dark-border'}`}
-              style={{ height: '22px', width: '40px' }}
-            >
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${autoplay ? 'translate-x-5' : 'translate-x-0.5'}`} />
-            </div>
-            <span className="text-sm text-light-text dark:text-dark-text">Slide autoplay</span>
-          </label>
+          <Toggle value={autoplay} onChange={setAutoplay} label="Slide autoplay" />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-light-border dark:border-dark-border p-5 space-y-5">
+        <h3 className="text-sm font-bold text-light-text dark:text-dark-text">Testimonials slider settings</h3>
+        <Toggle value={tmEnabled} onChange={setTmEnabled} label="Show testimonials section on home page" />
+        <div className="flex items-center gap-6 flex-wrap">
+          <div>
+            <label className="block text-xs font-semibold text-light-muted dark:text-dark-muted mb-1">Slide rotation (seconds)</label>
+            <input
+              type="number"
+              min={1}
+              max={60}
+              className="w-20 text-sm px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-card text-light-text dark:text-dark-text focus:outline-none focus:border-accent-cyan"
+              value={tmDelaySec}
+              onChange={e => setTmDelayMs(String(Number(e.target.value) * 1000))}
+            />
+          </div>
+          <Toggle value={tmAutoplay} onChange={setTmAutoplay} label="Slide autoplay" />
         </div>
       </div>
 

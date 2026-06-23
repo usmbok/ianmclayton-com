@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { ArrowRight, Lightbulb, Quote, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 interface Project {
@@ -42,6 +42,7 @@ interface Testimonial {
   attributed_name: string;
   attributed_role: string | null;
   attributed_organisation: string | null;
+  featured: boolean;
 }
 
 interface ExpertiseArea {
@@ -69,6 +70,9 @@ interface HeroSettings {
   hero_btn4_label: string; hero_btn4_url: string;
   banner_slide_delay_ms: string;
   banner_autoplay: string;
+  testimonials_section_enabled: string;
+  testimonials_autoplay: string;
+  testimonials_slide_delay_ms: string;
 }
 
 const ENTRY_TYPE_STYLE: Record<string, string> = {
@@ -121,6 +125,7 @@ export const BANNER_ICON_NAMES: string[] = [
 ];
 
 export function HomePage() {
+  const navigate = useNavigate();
   const [projects, setProjects]         = useState<Project[]>([]);
   const [timeline, setTimeline]         = useState<TimelineEntry[]>([]);
   const [articles, setArticles]         = useState<Article[]>([]);
@@ -129,10 +134,15 @@ export function HomePage() {
   const [slides, setSlides]             = useState<BannerSlide[]>([]);
   const [heroSettings, setHeroSettings] = useState<Partial<HeroSettings>>({});
 
-  // Slider — CSS-percentage based, no pixel measurement required
+  // Banner slider
   const [trackIndex, setTrackIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(true);
   const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Testimonials slider
+  const [tmTrackIndex, setTmTrackIndex] = useState(0);
+  const [tmIsAnimating, setTmIsAnimating] = useState(true);
+  const tmAutoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const delayMs  = Number(heroSettings.banner_slide_delay_ms ?? 5000);
   const autoplay = heroSettings.banner_autoplay !== 'false';
@@ -165,12 +175,61 @@ export function HomePage() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
+  // ── Testimonials slider settings ──
+  const tmDelayMs  = Number(heroSettings.testimonials_slide_delay_ms ?? 6000);
+  const tmAutoplay = heroSettings.testimonials_autoplay !== 'false';
+  const tmEnabled  = heroSettings.testimonials_section_enabled !== 'false';
+
+  const TM_CLONE = 2;
+  const tmExtended = testimonials.length > 0
+    ? [...testimonials, ...testimonials.slice(0, Math.min(TM_CLONE, testimonials.length))]
+    : [];
+  const TM_N = tmExtended.length;
+  // Show 1 on mobile, 2 on tablet, 3 on desktop
+  const tmTranslatePct = TM_N > 0 ? -(tmTrackIndex * 100) / TM_N : 0;
+
+  // Snap back from clone zone
+  useEffect(() => {
+    if (testimonials.length === 0 || tmTrackIndex < testimonials.length) return;
+    const id = setTimeout(() => {
+      setTmIsAnimating(false);
+      setTmTrackIndex(0);
+    }, 520);
+    return () => clearTimeout(id);
+  }, [tmTrackIndex, testimonials.length]);
+
+  useEffect(() => {
+    if (tmIsAnimating) return;
+    const id = requestAnimationFrame(() => setTmIsAnimating(true));
+    return () => cancelAnimationFrame(id);
+  }, [tmIsAnimating]);
+
+  useEffect(() => {
+    if (tmAutoTimerRef.current) clearInterval(tmAutoTimerRef.current);
+    if (tmAutoplay && testimonials.length > 1) {
+      tmAutoTimerRef.current = setInterval(() => {
+        setTmIsAnimating(true);
+        setTmTrackIndex(i => i + 1);
+      }, tmDelayMs);
+    }
+    return () => { if (tmAutoTimerRef.current) clearInterval(tmAutoTimerRef.current); };
+  }, [tmAutoplay, tmDelayMs, testimonials.length]);
+
+  function tmPrev() {
+    setTmIsAnimating(true);
+    setTmTrackIndex(i => (i <= 0 ? testimonials.length - 1 : i - 1));
+  }
+  function tmNext() {
+    setTmIsAnimating(true);
+    setTmTrackIndex(i => i + 1);
+  }
+
   useEffect(() => {
     Promise.all([
       supabase.from('projects').select('id,title,slug,client_display_name,industry,short_focus,project_type,tags').eq('featured', true).limit(3),
       supabase.from('timeline_entries').select('id,title,organisation,entry_date,entry_type,summary,is_milestone').order('entry_date', { ascending: false }).limit(3),
       supabase.from('articles').select('id,title,subtitle,slug,excerpt,category,reading_time_minutes,published_at').eq('featured', true).eq('status', 'published').limit(3),
-      supabase.from('testimonials').select('id,quote,attributed_name,attributed_role,attributed_organisation').eq('featured', true).eq('status', 'published').order('sort_order', { ascending: true }).limit(3),
+      supabase.from('testimonials').select('id,quote,attributed_name,attributed_role,attributed_organisation,featured').eq('featured', true).eq('status', 'published').order('sort_order', { ascending: true }).limit(6),
       supabase.from('expertise_areas').select('id,title,description,sort_order').order('sort_order', { ascending: true }),
       supabase.from('banner_slides').select('id,label,content_html,icon,sort_order').eq('active', true).order('sort_order'),
       supabase.from('site_settings').select('key,value'),
@@ -469,8 +528,8 @@ export function HomePage() {
         </section>
       )}
 
-      {/* Testimonials */}
-      {testimonials.length > 0 && (
+      {/* Testimonials Slider */}
+      {tmEnabled && testimonials.length > 0 && (
         <section className="bg-dark-bg py-16 lg:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-end justify-between mb-10">
@@ -482,8 +541,83 @@ export function HomePage() {
                 All testimonials <ArrowRight size={14} />
               </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {testimonials.map(t => <TestimonialCard key={t.id} testimonial={t} />)}
+
+            <div className="relative group">
+              <div className="overflow-hidden">
+                <div
+                  style={{
+                    display: 'flex',
+                    width: `${(TM_N / 3) * 100}%`,
+                    transform: `translateX(${tmTranslatePct}%)`,
+                    transition: tmIsAnimating ? 'transform 500ms ease-in-out' : 'none',
+                    willChange: 'transform',
+                  }}
+                >
+                  {tmExtended.map((t, i) => (
+                    <div
+                      key={`${t.id}-${i}`}
+                      style={{ flex: `0 0 ${100 / TM_N}%`, minWidth: 0 }}
+                      className="pr-5"
+                    >
+                      <button
+                        onClick={() => navigate(`/testimonials/${t.id}`)}
+                        className={`w-full text-left rounded-2xl border p-6 flex flex-col h-full group/card transition-all hover:shadow-lg ${
+                          t.featured
+                            ? 'border-accent-cyan/30 bg-accent-cyan/5 hover:border-accent-cyan/50'
+                            : 'border-dark-border bg-dark-elevated hover:border-accent-cyan/30'
+                        }`}
+                      >
+                        <Quote size={22} className={`mb-4 flex-shrink-0 ${t.featured ? 'text-accent-cyan' : 'text-dark-muted'}`} />
+                        <p className="text-dark-secondary text-sm leading-relaxed flex-1 italic line-clamp-4 mb-5">
+                          "{t.quote.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}"
+                        </p>
+                        <div className="pt-4 border-t border-dark-border">
+                          <p className="text-white text-sm font-semibold group-hover/card:text-accent-cyan transition-colors">{t.attributed_name}</p>
+                          {(t.attributed_role || t.attributed_organisation) && (
+                            <p className="text-dark-muted text-xs mt-0.5">
+                              {[t.attributed_role, t.attributed_organisation].filter(Boolean).join(', ')}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {testimonials.length > 1 && (
+                <>
+                  <button
+                    onClick={tmPrev}
+                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-dark-elevated border border-dark-border flex items-center justify-center text-dark-muted hover:text-accent-cyan hover:border-accent-cyan transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
+                  <button
+                    onClick={tmNext}
+                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-dark-elevated border border-dark-border flex items-center justify-center text-dark-muted hover:text-accent-cyan hover:border-accent-cyan transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                </>
+              )}
+
+              {testimonials.length > 1 && (
+                <div className="flex justify-center gap-1.5 mt-6">
+                  {testimonials.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { setTmIsAnimating(true); setTmTrackIndex(i); }}
+                      aria-label={`Go to testimonial ${i + 1}`}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        (tmTrackIndex % testimonials.length) === i
+                          ? 'w-4 bg-accent-cyan'
+                          : 'w-1.5 bg-dark-border'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -612,25 +746,6 @@ function ArticleCard({ article }: { article: Article }) {
         Read article <ArrowRight size={12} />
       </div>
     </Link>
-  );
-}
-
-function TestimonialCard({ testimonial }: { testimonial: Testimonial }) {
-  return (
-    <div className="bg-dark-elevated border border-dark-border rounded-xl p-6 flex flex-col">
-      <Quote size={24} className="text-accent-cyan mb-4 flex-shrink-0" />
-      <p className="text-dark-secondary text-sm leading-relaxed flex-1 italic">
-        "{testimonial.quote}"
-      </p>
-      <div className="mt-5 pt-4 border-t border-dark-border">
-        <p className="text-dark-text text-sm font-semibold">{testimonial.attributed_name}</p>
-        {(testimonial.attributed_role || testimonial.attributed_organisation) && (
-          <p className="text-dark-muted text-xs mt-0.5">
-            {[testimonial.attributed_role, testimonial.attributed_organisation].filter(Boolean).join(', ')}
-          </p>
-        )}
-      </div>
-    </div>
   );
 }
 

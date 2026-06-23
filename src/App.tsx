@@ -17,6 +17,7 @@ import { WorkHistoryPage } from './pages/WorkHistoryPage';
 import { ArticlesPage } from './pages/ArticlesPage';
 import { ArticleDetailPage } from './pages/ArticleDetailPage';
 import { TestimonialsPage } from './pages/TestimonialsPage';
+import { TestimonialDetailPage } from './pages/TestimonialDetailPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { AdminSocialPage } from './pages/admin/AdminSocialPage';
 import { AdminMfaPage } from './pages/admin/AdminMfaPage';
@@ -48,6 +49,7 @@ function App() {
               <Route path="/articles" element={<ArticlesPage />} />
               <Route path="/articles/:slug" element={<ArticleDetailPage />} />
               <Route path="/testimonials" element={<TestimonialsPage />} />
+              <Route path="/testimonials/:id" element={<TestimonialDetailPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/roadmap" element={<RoadmapPage />} />
               <Route path="/login" element={<LoginPage />} />

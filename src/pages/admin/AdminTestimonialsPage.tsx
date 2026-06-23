@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AdminBreadcrumb } from '../../components/AdminLayout';
-import { Plus, Pencil, Trash2, Star, X, Save, AlertCircle, GripVertical } from 'lucide-react';
+import { RichTextEditor } from '../../components/RichTextEditor';
+import { Plus, Pencil, Trash2, Star, X, Save, AlertCircle, GripVertical, Eye, EyeOff } from 'lucide-react';
 
 interface Testimonial {
   id: string;
@@ -12,13 +13,14 @@ interface Testimonial {
   relationship_context: string | null;
   tags: string[];
   featured: boolean;
+  active: boolean;
   sort_order: number;
   status: string;
 }
 
 const EMPTY: Omit<Testimonial, 'id'> = {
   quote: '', attributed_name: '', attributed_role: '', attributed_organisation: '',
-  relationship_context: '', tags: [], featured: false, sort_order: 0, status: 'published',
+  relationship_context: '', tags: [], featured: false, active: true, sort_order: 0, status: 'published',
 };
 
 function TagInput({ value, onChange, placeholder }: { value: string[]; onChange: (v: string[]) => void; placeholder: string }) {
@@ -99,6 +101,11 @@ export function AdminTestimonialsPage() {
     load();
   }
 
+  async function toggleActive(t: Testimonial) {
+    await supabase.from('testimonials').update({ active: !t.active }).eq('id', t.id);
+    load();
+  }
+
   const inputCls = 'w-full text-sm px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-card text-light-text dark:text-dark-text placeholder:text-light-muted dark:placeholder:text-dark-muted focus:outline-none focus:border-accent-cyan';
   const labelCls = 'block text-xs font-semibold text-light-muted dark:text-dark-muted mb-1';
 
@@ -136,6 +143,9 @@ export function AdminTestimonialsPage() {
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${t.status === 'published' ? 'bg-accent-green/10 text-accent-green' : 'bg-light-elevated dark:bg-dark-elevated text-light-muted dark:text-dark-muted'}`}>{t.status}</span>
+                <button onClick={() => toggleActive(t)} title="Toggle active" className={`p-1.5 rounded-lg transition-colors ${t.active !== false ? 'text-accent-cyan hover:text-accent-cyan/70' : 'text-light-muted dark:text-dark-muted hover:text-accent-cyan'}`}>
+                  {t.active !== false ? <Eye size={14} /> : <EyeOff size={14} />}
+                </button>
                 <button onClick={() => toggleFeatured(t)} className={`p-1.5 rounded-lg transition-colors ${t.featured ? 'text-accent-gold' : 'text-light-muted dark:text-dark-muted hover:text-accent-gold'}`}><Star size={14} /></button>
                 <button onClick={() => openEdit(t)} className="p-1.5 rounded-lg hover:bg-light-elevated dark:hover:bg-dark-elevated text-light-muted dark:text-dark-muted transition-colors"><Pencil size={14} /></button>
                 <button onClick={() => setDeleteId(t.id)} className="p-1.5 rounded-lg hover:bg-accent-red/10 text-light-muted dark:text-dark-muted hover:text-accent-red transition-colors"><Trash2 size={14} /></button>
@@ -158,7 +168,7 @@ export function AdminTestimonialsPage() {
               {error && <div className="flex items-center gap-2 p-3 rounded-lg bg-accent-red/10 text-accent-red text-sm"><AlertCircle size={15} />{error}</div>}
               <div>
                 <label className={labelCls}>Quote *</label>
-                <textarea rows={5} className={inputCls} value={form.quote} onChange={e => set('quote', e.target.value)} placeholder="The testimonial quote…" />
+                <RichTextEditor value={form.quote} onChange={v => set('quote', v)} placeholder="The testimonial quote…" minHeight={140} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
@@ -191,6 +201,10 @@ export function AdminTestimonialsPage() {
                 <div className="col-span-2 flex items-center gap-2">
                   <input type="checkbox" id="test-featured" checked={form.featured} onChange={e => set('featured', e.target.checked)} className="w-4 h-4 accent-cyan-400" />
                   <label htmlFor="test-featured" className="text-sm text-light-text dark:text-dark-text cursor-pointer">Featured</label>
+                </div>
+                <div className="col-span-2 flex items-center gap-2">
+                  <input type="checkbox" id="test-active" checked={form.active !== false} onChange={e => set('active', e.target.checked)} className="w-4 h-4 accent-cyan-400" />
+                  <label htmlFor="test-active" className="text-sm text-light-text dark:text-dark-text cursor-pointer">Active (visible on site)</label>
                 </div>
               </div>
               <div>
