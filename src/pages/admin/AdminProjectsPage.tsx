@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { AdminBreadcrumb } from '../../components/AdminLayout';
 import { RichTextEditor } from '../../components/RichTextEditor';
 import { Plus, Pencil, Trash2, Eye, EyeOff, Star, X, Save, AlertCircle, Search, Filter, Download } from 'lucide-react';
-import { downloadCSV, downloadSQL, stripHtml } from '../../lib/exportUtils';
+import { downloadCSV, downloadSQL } from '../../lib/exportUtils';
 
 interface Project {
   id: string;
