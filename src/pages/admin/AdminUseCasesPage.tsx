@@ -6,7 +6,7 @@ import {
   Plus, Pencil, Trash2, Eye, EyeOff, Star, X, Save, AlertCircle,
   Search, Filter, FileText, Download,
 } from 'lucide-react';
-import { downloadCSV, downloadSQL, stripHtml } from '../../lib/exportUtils';
+import { downloadCSV, downloadSQL } from '../../lib/exportUtils';
 
 interface UseCase {
   id: string;
