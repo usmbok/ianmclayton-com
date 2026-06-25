@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AdminBreadcrumb } from '../../components/AdminLayout';
 import { RichTextEditor } from '../../components/RichTextEditor';
-import { Plus, Pencil, Trash2, Star, X, Save, AlertCircle, GripVertical, Eye, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, X, Save, AlertCircle, GripVertical, Eye, EyeOff, Download } from 'lucide-react';
+import { downloadCSV, downloadSQL, stripHtml } from '../../lib/exportUtils';
 
 interface Testimonial {
   id: string;
@@ -109,6 +110,24 @@ export function AdminTestimonialsPage() {
   const inputCls = 'w-full text-sm px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-card text-light-text dark:text-dark-text placeholder:text-light-muted dark:placeholder:text-dark-muted focus:outline-none focus:border-accent-cyan';
   const labelCls = 'block text-xs font-semibold text-light-muted dark:text-dark-muted mb-1';
 
+  function exportData(format: 'csv' | 'sql') {
+    const rows = testimonials.map(t => ({
+      id: t.id,
+      quote: stripHtml(t.quote),
+      attributed_name: t.attributed_name,
+      attributed_role: t.attributed_role ?? '',
+      attributed_organisation: t.attributed_organisation ?? '',
+      relationship_context: t.relationship_context ?? '',
+      tags: t.tags,
+      featured: t.featured,
+      active: t.active,
+      status: t.status,
+      sort_order: t.sort_order,
+    }));
+    if (format === 'csv') downloadCSV('testimonials', rows);
+    else downloadSQL('testimonials', 'testimonials', rows);
+  }
+
   return (
     <div>
       <AdminBreadcrumb items={[{ label: 'Testimonials' }]} />
@@ -117,9 +136,20 @@ export function AdminTestimonialsPage() {
           <h1 className="text-2xl font-bold text-light-text dark:text-dark-text">Testimonials</h1>
           <p className="text-sm text-light-muted dark:text-dark-muted mt-0.5">{testimonials.length} total</p>
         </div>
-        <button onClick={openNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-cyan text-white dark:text-dark-bg text-sm font-semibold hover:bg-accent-cyan/85 transition-colors">
-          <Plus size={15} /> New Testimonial
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="relative group">
+            <button className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-light-border dark:border-dark-border text-sm text-light-secondary dark:text-dark-secondary hover:bg-light-elevated dark:hover:bg-dark-elevated transition-colors">
+              <Download size={14} /> Export
+            </button>
+            <div className="absolute right-0 top-full mt-1 w-32 bg-light-bg dark:bg-dark-elevated border border-light-border dark:border-dark-border rounded-lg shadow-lg overflow-hidden hidden group-hover:block z-10">
+              <button onClick={() => exportData('csv')} className="w-full text-left px-4 py-2 text-sm text-light-text dark:text-dark-text hover:bg-light-elevated dark:hover:bg-dark-card transition-colors">CSV</button>
+              <button onClick={() => exportData('sql')} className="w-full text-left px-4 py-2 text-sm text-light-text dark:text-dark-text hover:bg-light-elevated dark:hover:bg-dark-card transition-colors">SQL</button>
+            </div>
+          </div>
+          <button onClick={openNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-cyan text-white dark:text-dark-bg text-sm font-semibold hover:bg-accent-cyan/85 transition-colors">
+            <Plus size={15} /> New Testimonial
+          </button>
+        </div>
       </div>
 
       {loading ? (

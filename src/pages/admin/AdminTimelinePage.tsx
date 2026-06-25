@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AdminBreadcrumb } from '../../components/AdminLayout';
 import { RichTextEditor } from '../../components/RichTextEditor';
-import { Plus, Pencil, Trash2, Eye, EyeOff, Star, X, Save, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Star, X, Save, AlertCircle, Download } from 'lucide-react';
+import { downloadCSV, downloadSQL, stripHtml } from '../../lib/exportUtils';
 
 interface Entry {
   id: string;
@@ -108,6 +109,31 @@ export function AdminTimelinePage() {
   const inputCls = 'w-full text-sm px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-card text-light-text dark:text-dark-text placeholder:text-light-muted dark:placeholder:text-dark-muted focus:outline-none focus:border-accent-cyan';
   const labelCls = 'block text-xs font-semibold text-light-muted dark:text-dark-muted mb-1';
 
+  function exportData(format: 'csv' | 'sql') {
+    const rows = filtered.map(e => ({
+      id: e.id,
+      title: e.title,
+      entry_type: e.entry_type,
+      organisation: e.organisation ?? '',
+      role: e.role ?? '',
+      industry: e.industry ?? '',
+      entry_date: e.entry_date,
+      entry_date_end: e.entry_date_end ?? '',
+      status: e.status,
+      confidentiality: e.confidentiality,
+      is_milestone: e.is_milestone,
+      is_featured: e.is_featured,
+      sm_themes: e.sm_themes,
+      automation_themes: e.automation_themes,
+      skills: e.skills,
+      tags: e.tags,
+      summary: e.summary,
+      detail: stripHtml(e.detail_html),
+    }));
+    if (format === 'csv') downloadCSV('timeline_entries', rows);
+    else downloadSQL('timeline_entries', 'timeline_entries', rows);
+  }
+
   return (
     <div>
       <AdminBreadcrumb items={[{ label: 'Timeline' }]} />
@@ -116,9 +142,20 @@ export function AdminTimelinePage() {
           <h1 className="text-2xl font-bold text-light-text dark:text-dark-text">Timeline</h1>
           <p className="text-sm text-light-muted dark:text-dark-muted mt-0.5">{entries.length} entries</p>
         </div>
-        <button onClick={openNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-cyan text-white dark:text-dark-bg text-sm font-semibold hover:bg-accent-cyan/85 transition-colors">
-          <Plus size={15} /> New Entry
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="relative group">
+            <button className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-light-border dark:border-dark-border text-sm text-light-secondary dark:text-dark-secondary hover:bg-light-elevated dark:hover:bg-dark-elevated transition-colors">
+              <Download size={14} /> Export ({filtered.length})
+            </button>
+            <div className="absolute right-0 top-full mt-1 w-32 bg-light-bg dark:bg-dark-elevated border border-light-border dark:border-dark-border rounded-lg shadow-lg overflow-hidden hidden group-hover:block z-10">
+              <button onClick={() => exportData('csv')} className="w-full text-left px-4 py-2 text-sm text-light-text dark:text-dark-text hover:bg-light-elevated dark:hover:bg-dark-card transition-colors">CSV</button>
+              <button onClick={() => exportData('sql')} className="w-full text-left px-4 py-2 text-sm text-light-text dark:text-dark-text hover:bg-light-elevated dark:hover:bg-dark-card transition-colors">SQL</button>
+            </div>
+          </div>
+          <button onClick={openNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-cyan text-white dark:text-dark-bg text-sm font-semibold hover:bg-accent-cyan/85 transition-colors">
+            <Plus size={15} /> New Entry
+          </button>
+        </div>
       </div>
 
       {/* Type filter pills */}

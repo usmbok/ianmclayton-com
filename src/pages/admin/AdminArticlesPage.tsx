@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AdminBreadcrumb } from '../../components/AdminLayout';
 import { RichTextEditor } from '../../components/RichTextEditor';
-import { Plus, Pencil, Trash2, Eye, EyeOff, Star, X, Save, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Star, X, Save, AlertCircle, Download } from 'lucide-react';
+import { downloadCSV, downloadSQL, stripHtml } from '../../lib/exportUtils';
 
 interface Article {
   id: string;
@@ -122,6 +123,25 @@ export function AdminArticlesPage() {
   const inputCls = 'w-full text-sm px-3 py-2 rounded-lg border border-light-border dark:border-dark-border bg-light-bg dark:bg-dark-card text-light-text dark:text-dark-text placeholder:text-light-muted dark:placeholder:text-dark-muted focus:outline-none focus:border-accent-cyan';
   const labelCls = 'block text-xs font-semibold text-light-muted dark:text-dark-muted mb-1';
 
+  function exportData(format: 'csv' | 'sql') {
+    const rows = articles.map(a => ({
+      id: a.id,
+      title: a.title,
+      subtitle: a.subtitle ?? '',
+      slug: a.slug,
+      category: a.category ?? '',
+      status: a.status,
+      featured: a.featured,
+      published_at: a.published_at ?? '',
+      reading_time_minutes: a.reading_time_minutes ?? '',
+      tags: a.tags,
+      excerpt: a.excerpt ?? '',
+      content: stripHtml(a.content_html),
+    }));
+    if (format === 'csv') downloadCSV('articles', rows);
+    else downloadSQL('articles', 'articles', rows);
+  }
+
   return (
     <div>
       <AdminBreadcrumb items={[{ label: 'Articles' }]} />
@@ -130,9 +150,20 @@ export function AdminArticlesPage() {
           <h1 className="text-2xl font-bold text-light-text dark:text-dark-text">Articles</h1>
           <p className="text-sm text-light-muted dark:text-dark-muted mt-0.5">{articles.length} total</p>
         </div>
-        <button onClick={openNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-cyan text-white dark:text-dark-bg text-sm font-semibold hover:bg-accent-cyan/85 transition-colors">
-          <Plus size={15} /> New Article
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="relative group">
+            <button className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-light-border dark:border-dark-border text-sm text-light-secondary dark:text-dark-secondary hover:bg-light-elevated dark:hover:bg-dark-elevated transition-colors">
+              <Download size={14} /> Export
+            </button>
+            <div className="absolute right-0 top-full mt-1 w-32 bg-light-bg dark:bg-dark-elevated border border-light-border dark:border-dark-border rounded-lg shadow-lg overflow-hidden hidden group-hover:block z-10">
+              <button onClick={() => exportData('csv')} className="w-full text-left px-4 py-2 text-sm text-light-text dark:text-dark-text hover:bg-light-elevated dark:hover:bg-dark-card transition-colors">CSV</button>
+              <button onClick={() => exportData('sql')} className="w-full text-left px-4 py-2 text-sm text-light-text dark:text-dark-text hover:bg-light-elevated dark:hover:bg-dark-card transition-colors">SQL</button>
+            </div>
+          </div>
+          <button onClick={openNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-cyan text-white dark:text-dark-bg text-sm font-semibold hover:bg-accent-cyan/85 transition-colors">
+            <Plus size={15} /> New Article
+          </button>
+        </div>
       </div>
 
       {loading ? (

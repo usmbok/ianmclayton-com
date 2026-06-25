@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AdminBreadcrumb } from '../../components/AdminLayout';
 import { RichTextEditor } from '../../components/RichTextEditor';
-import { Plus, Pencil, Trash2, Eye, EyeOff, Star, X, Save, AlertCircle, Search, Filter } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Star, X, Save, AlertCircle, Search, Filter, Download } from 'lucide-react';
+import { downloadCSV, downloadSQL, stripHtml } from '../../lib/exportUtils';
 
 interface Project {
   id: string;
@@ -224,6 +225,39 @@ export function AdminProjectsPage() {
     setEmployerFilter('');
   }
 
+  function exportData(format: 'csv' | 'sql') {
+    const rows = filtered.map(p => ({
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      client_display_name: p.client_display_name ?? '',
+      client_name: p.client_name ?? '',
+      show_client_name: p.show_client_name,
+      employer: p.employer_id ? (employerMap[p.employer_id] ?? p.employer_id) : '',
+      industry: p.industry ?? '',
+      project_type: p.project_type ?? '',
+      role: p.role ?? '',
+      status: p.status,
+      confidentiality: p.confidentiality,
+      featured: p.featured,
+      date_start: p.date_start ?? '',
+      date_end: p.date_end ?? '',
+      sm_themes: p.sm_themes,
+      automation_themes: p.automation_themes,
+      tags: p.tags,
+      short_focus: stripHtml(p.short_focus),
+      context: stripHtml(p.context_html),
+      challenge: stripHtml(p.challenge_html),
+      my_role: stripHtml(p.my_role_html),
+      approach: stripHtml(p.approach_html),
+      outcomes: stripHtml(p.outcomes_html),
+      lessons: stripHtml(p.lessons_html),
+      client_comments: stripHtml(p.client_comments_html),
+    }));
+    if (format === 'csv') downloadCSV('projects', rows);
+    else downloadSQL('projects', 'projects', rows);
+  }
+
   return (
     <div>
       <AdminBreadcrumb items={[{ label: 'Projects' }]} />
@@ -238,9 +272,20 @@ export function AdminProjectsPage() {
             }
           </p>
         </div>
-        <button onClick={openNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-cyan text-white dark:text-dark-bg text-sm font-semibold hover:bg-accent-cyan/85 transition-colors">
-          <Plus size={15} /> New Project
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="relative group">
+            <button className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-light-border dark:border-dark-border text-sm text-light-secondary dark:text-dark-secondary hover:bg-light-elevated dark:hover:bg-dark-elevated transition-colors">
+              <Download size={14} /> Export ({filtered.length})
+            </button>
+            <div className="absolute right-0 top-full mt-1 w-32 bg-light-bg dark:bg-dark-elevated border border-light-border dark:border-dark-border rounded-lg shadow-lg overflow-hidden hidden group-hover:block z-10">
+              <button onClick={() => exportData('csv')} className="w-full text-left px-4 py-2 text-sm text-light-text dark:text-dark-text hover:bg-light-elevated dark:hover:bg-dark-card transition-colors">CSV</button>
+              <button onClick={() => exportData('sql')} className="w-full text-left px-4 py-2 text-sm text-light-text dark:text-dark-text hover:bg-light-elevated dark:hover:bg-dark-card transition-colors">SQL</button>
+            </div>
+          </div>
+          <button onClick={openNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-cyan text-white dark:text-dark-bg text-sm font-semibold hover:bg-accent-cyan/85 transition-colors">
+            <Plus size={15} /> New Project
+          </button>
+        </div>
       </div>
 
       {/* Search bar */}

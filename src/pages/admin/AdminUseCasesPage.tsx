@@ -4,8 +4,9 @@ import { AdminBreadcrumb } from '../../components/AdminLayout';
 import { RichTextEditor } from '../../components/RichTextEditor';
 import {
   Plus, Pencil, Trash2, Eye, EyeOff, Star, X, Save, AlertCircle,
-  Search, Filter, FileText,
+  Search, Filter, FileText, Download,
 } from 'lucide-react';
+import { downloadCSV, downloadSQL, stripHtml } from '../../lib/exportUtils';
 
 interface UseCase {
   id: string;
@@ -237,6 +238,35 @@ export function AdminUseCasesPage() {
     setSearchQuery(''); setStatusFilter(''); setProductFilter(''); setEmployerFilter('');
   }
 
+  function exportData(format: 'csv' | 'sql') {
+    const rows = filtered.map(uc => ({
+      id: uc.id,
+      title: uc.title,
+      slug: uc.slug,
+      subtitle: uc.subtitle ?? '',
+      client_display_name: uc.client_display_name ?? '',
+      client_name: uc.client_name ?? '',
+      show_client_name: uc.show_client_name,
+      industry: uc.industry ?? '',
+      servicenow_product: uc.servicenow_product ?? '',
+      project_type: uc.project_type ?? '',
+      employer: uc.employer_id ? (employerMap[uc.employer_id] ?? uc.employer_id) : '',
+      date_delivered: uc.date_delivered ?? '',
+      status: uc.status,
+      confidentiality: uc.confidentiality,
+      featured: uc.featured,
+      pdf_path: uc.pdf_path ?? '',
+      tags: uc.tags,
+      outcome_bullets: uc.outcome_bullets,
+      summary: stripHtml(uc.summary_html),
+      challenge: stripHtml(uc.challenge_html),
+      solution: stripHtml(uc.solution_html),
+      outcomes: stripHtml(uc.outcomes_html),
+    }));
+    if (format === 'csv') downloadCSV('use_cases', rows);
+    else downloadSQL('use_cases', 'use_cases', rows);
+  }
+
   return (
     <div>
       <AdminBreadcrumb items={[{ label: 'Use Cases' }]} />
@@ -251,9 +281,20 @@ export function AdminUseCasesPage() {
             }
           </p>
         </div>
-        <button onClick={openNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-cyan text-white dark:text-dark-bg text-sm font-semibold hover:bg-accent-cyan/85 transition-colors">
-          <Plus size={15} /> New Use Case
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="relative group">
+            <button className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-light-border dark:border-dark-border text-sm text-light-secondary dark:text-dark-secondary hover:bg-light-elevated dark:hover:bg-dark-elevated transition-colors">
+              <Download size={14} /> Export ({filtered.length})
+            </button>
+            <div className="absolute right-0 top-full mt-1 w-32 bg-light-bg dark:bg-dark-elevated border border-light-border dark:border-dark-border rounded-lg shadow-lg overflow-hidden hidden group-hover:block z-10">
+              <button onClick={() => exportData('csv')} className="w-full text-left px-4 py-2 text-sm text-light-text dark:text-dark-text hover:bg-light-elevated dark:hover:bg-dark-card transition-colors">CSV</button>
+              <button onClick={() => exportData('sql')} className="w-full text-left px-4 py-2 text-sm text-light-text dark:text-dark-text hover:bg-light-elevated dark:hover:bg-dark-card transition-colors">SQL</button>
+            </div>
+          </div>
+          <button onClick={openNew} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-cyan text-white dark:text-dark-bg text-sm font-semibold hover:bg-accent-cyan/85 transition-colors">
+            <Plus size={15} /> New Use Case
+          </button>
+        </div>
       </div>
 
       {/* Search */}
