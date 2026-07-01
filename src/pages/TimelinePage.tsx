@@ -47,6 +47,15 @@ function formatRange(start: string, end: string | null) {
 }
 
 export function TimelinePage() {
+  const [entries, setEntries] = useState<TimelineEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<TimelineEntry | null>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     supabase
       .from('timeline_entries')
